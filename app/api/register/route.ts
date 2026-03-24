@@ -91,7 +91,6 @@ export async function POST(request: NextRequest) {
           uid: authData.user.id, // Foreign key to auth.users
           name,
           email,
-          password, // Password is already stored in auth.users, but keeping here if needed
           role,
         },
       ])

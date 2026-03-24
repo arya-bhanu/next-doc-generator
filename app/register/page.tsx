@@ -3,9 +3,12 @@
 import { useState, FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { useLanguage } from '@/contexts/LanguageContext';
+import LanguageToggle from '@/components/LanguageToggle';
 
 export default function RegisterPage() {
   const router = useRouter();
+  const { t } = useLanguage();
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -36,29 +39,29 @@ export default function RegisterPage() {
     const newErrors: { [key: string]: string } = {};
 
     if (!formData.name.trim()) {
-      newErrors.name = 'Name is required';
+      newErrors.name = t('register.nameRequired');
     }
 
     if (!formData.email.trim()) {
-      newErrors.email = 'Email is required';
+      newErrors.email = t('register.emailRequired');
     } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
-      newErrors.email = 'Email is invalid';
+      newErrors.email = t('register.emailInvalid');
     }
 
     if (!formData.password) {
-      newErrors.password = 'Password is required';
+      newErrors.password = t('register.passwordRequired');
     } else if (formData.password.length < 6) {
-      newErrors.password = 'Password must be at least 6 characters';
+      newErrors.password = t('register.passwordMinLength');
     }
 
     if (!formData.confirmPassword) {
-      newErrors.confirmPassword = 'Confirm password is required';
+      newErrors.confirmPassword = t('register.confirmPasswordRequired');
     } else if (formData.password !== formData.confirmPassword) {
-      newErrors.confirmPassword = 'Passwords do not match';
+      newErrors.confirmPassword = t('register.passwordsNotMatch');
     }
 
     if (!formData.role) {
-      newErrors.role = 'Role is required';
+      newErrors.role = t('register.roleRequired');
     }
 
     setErrors(newErrors);
@@ -97,13 +100,13 @@ export default function RegisterPage() {
         if (data.errors) {
           setErrors(data.errors);
         } else {
-          setErrors({ general: data.message || 'Registration failed' });
+          setErrors({ general: data.message || t('register.registrationFailed') });
         }
         return;
       }
 
       // Success - show message and redirect to login page
-      setSuccessMessage('Registration successful! Please check your email to confirm your account before logging in.');
+      setSuccessMessage(t('register.successMessage'));
       
       // Redirect after 5 seconds to give user time to read the message
       setTimeout(() => {
@@ -111,7 +114,7 @@ export default function RegisterPage() {
       }, 5000);
     } catch (error) {
       console.error('Registration error:', error);
-      setErrors({ general: 'An unexpected error occurred. Please try again.' });
+      setErrors({ general: t('register.unexpectedError') });
     } finally {
       setIsLoading(false);
     }
@@ -119,15 +122,19 @@ export default function RegisterPage() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900 py-12 px-4 sm:px-6 lg:px-8">
+      <div className="absolute top-4 right-4">
+        <LanguageToggle />
+      </div>
+      
       <div className="max-w-md w-full space-y-8">
         <div>
           <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900 dark:text-white">
-            Create your account
+            {t('register.title')}
           </h2>
           <p className="mt-2 text-center text-sm text-gray-600 dark:text-gray-400">
-            Or{' '}
+            {t('register.subtitle')}{' '}
             <Link href="/login" className="font-medium text-blue-600 hover:text-blue-500 dark:text-blue-400">
-              sign in to your account
+              {t('register.subtitleLink')}
             </Link>
           </p>
         </div>
@@ -136,7 +143,7 @@ export default function RegisterPage() {
           {successMessage && (
             <div className="rounded-md bg-green-50 dark:bg-green-900/20 p-4 border border-green-200 dark:border-green-800">
               <div className="flex">
-                <div className="flex-shrink-0">
+                <div className="shrink-0">
                   <svg className="h-5 w-5 text-green-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
                     <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                   </svg>
@@ -146,7 +153,7 @@ export default function RegisterPage() {
                     {successMessage}
                   </p>
                   <p className="text-xs text-green-700 dark:text-green-500 mt-1">
-                    Redirecting to login page in 5 seconds...
+                    {t('register.redirectMessage')}
                   </p>
                 </div>
               </div>
@@ -163,7 +170,7 @@ export default function RegisterPage() {
             {/* Name Field */}
             <div>
               <label htmlFor="name" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Name <span className="text-red-500">*</span>
+                {t('register.name')} <span className="text-red-500">*</span>
               </label>
               <input
                 id="name"
@@ -174,7 +181,7 @@ export default function RegisterPage() {
                 className={`appearance-none relative block w-full px-3 py-2 border ${
                   errors.name ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'
                 } placeholder-gray-500 text-gray-900 dark:text-white dark:bg-gray-800 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm`}
-                placeholder="Enter your name"
+                placeholder={t('register.namePlaceholder')}
               />
               {errors.name && (
                 <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.name}</p>
@@ -184,7 +191,7 @@ export default function RegisterPage() {
             {/* Email Field */}
             <div>
               <label htmlFor="email" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Email <span className="text-red-500">*</span>
+                {t('register.email')} <span className="text-red-500">*</span>
               </label>
               <input
                 id="email"
@@ -196,7 +203,7 @@ export default function RegisterPage() {
                 className={`appearance-none relative block w-full px-3 py-2 border ${
                   errors.email ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'
                 } placeholder-gray-500 text-gray-900 dark:text-white dark:bg-gray-800 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm`}
-                placeholder="Enter your email"
+                placeholder={t('register.emailPlaceholder')}
               />
               {errors.email && (
                 <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.email}</p>
@@ -206,7 +213,7 @@ export default function RegisterPage() {
             {/* Password Field */}
             <div>
               <label htmlFor="password" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Password <span className="text-red-500">*</span>
+                {t('register.password')} <span className="text-red-500">*</span>
               </label>
               <input
                 id="password"
@@ -218,7 +225,7 @@ export default function RegisterPage() {
                 className={`appearance-none relative block w-full px-3 py-2 border ${
                   errors.password ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'
                 } placeholder-gray-500 text-gray-900 dark:text-white dark:bg-gray-800 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm`}
-                placeholder="Enter your password"
+                placeholder={t('register.passwordPlaceholder')}
               />
               {errors.password && (
                 <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.password}</p>
@@ -228,7 +235,7 @@ export default function RegisterPage() {
             {/* Confirm Password Field */}
             <div>
               <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Confirm Password <span className="text-red-500">*</span>
+                {t('register.confirmPassword')} <span className="text-red-500">*</span>
               </label>
               <input
                 id="confirmPassword"
@@ -240,7 +247,7 @@ export default function RegisterPage() {
                 className={`appearance-none relative block w-full px-3 py-2 border ${
                   errors.confirmPassword ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'
                 } placeholder-gray-500 text-gray-900 dark:text-white dark:bg-gray-800 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm`}
-                placeholder="Confirm your password"
+                placeholder={t('register.confirmPasswordPlaceholder')}
               />
               {errors.confirmPassword && (
                 <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.confirmPassword}</p>
@@ -250,7 +257,7 @@ export default function RegisterPage() {
             {/* Role Field */}
             <div>
               <label htmlFor="role" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Role <span className="text-red-500">*</span>
+                {t('register.role')} <span className="text-red-500">*</span>
               </label>
               <select
                 id="role"
@@ -261,9 +268,9 @@ export default function RegisterPage() {
                   errors.role ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'
                 } text-gray-900 dark:text-white dark:bg-gray-800 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm`}
               >
-                <option value="">Select a role</option>
-                <option value="cs">Customer Service</option>
-                <option value="ub">Universal Banker</option>
+                <option value="">{t('register.roleSelect')}</option>
+                <option value="cs">{t('register.roleCS')}</option>
+                <option value="ub">{t('register.roleUB')}</option>
               </select>
               {errors.role && (
                 <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.role}</p>
@@ -277,7 +284,7 @@ export default function RegisterPage() {
               disabled={isLoading || !!successMessage}
               className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {isLoading ? 'Creating account...' : successMessage ? '✓ Account created' : 'Create account'}
+              {isLoading ? t('register.creatingAccount') : successMessage ? t('register.accountCreated') : t('register.createAccount')}
             </button>
           </div>
         </form>
