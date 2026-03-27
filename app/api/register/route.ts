@@ -5,11 +5,8 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const { name, email, password, confirmPassword, role } = body;
-
-    // Backend validation
     const errors: { [key: string]: string } = {};
 
-    // Validate required fields
     if (!name || !name.trim()) {
       errors.name = 'Name is required';
     }
@@ -30,7 +27,6 @@ export async function POST(request: NextRequest) {
       errors.confirmPassword = 'Confirm password is required';
     }
 
-    // Validate password matching (Backend validation)
     if (password && confirmPassword && password !== confirmPassword) {
       errors.confirmPassword = 'Passwords do not match';
     }
@@ -41,7 +37,6 @@ export async function POST(request: NextRequest) {
       errors.role = 'Invalid role selected';
     }
 
-    // If there are validation errors, return them
     if (Object.keys(errors).length > 0) {
       return NextResponse.json(
         { message: 'Validation failed', errors },
@@ -49,7 +44,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Step 1: Create user in Supabase Auth (this generates the UUID)
     const { data: authData, error: authError } = await supabase.auth.signUp({
       email,
       password,
@@ -62,7 +56,6 @@ export async function POST(request: NextRequest) {
     });
 
     if (authError) {
-      // Handle specific Supabase errors
       if (authError.message.includes('already registered')) {
         return NextResponse.json(
           { message: 'Email already registered', errors: { email: 'Email already registered' } },
@@ -83,12 +76,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Step 2: Insert user data into ops_user table with UID from auth.users
     const { data: userData, error: dbError } = await supabase
       .from('ops_user')
       .insert([
         {
-          uid: authData.user.id, // Foreign key to auth.users
+          uid: authData.user.id,
           name,
           email,
           role,
@@ -99,8 +91,6 @@ export async function POST(request: NextRequest) {
 
     if (dbError) {
       console.error('Error saving user data to ops_user:', dbError);
-      // If ops_user insert fails, you might want to delete the auth user
-      // await supabase.auth.admin.deleteUser(authData.user.id);
       return NextResponse.json(
         { message: 'Failed to create user profile', error: dbError.message },
         { status: 500 }

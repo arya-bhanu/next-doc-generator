@@ -26,7 +26,6 @@ export default function RegisterPage() {
       ...prev,
       [name]: value,
     }));
-    // Clear error when user starts typing
     if (errors[name]) {
       setErrors((prev) => ({
         ...prev,
@@ -71,7 +70,6 @@ export default function RegisterPage() {
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     
-    // Frontend validation
     if (!validateForm()) {
       return;
     }
@@ -105,10 +103,8 @@ export default function RegisterPage() {
         return;
       }
 
-      // Success - show message and redirect to login page
       setSuccessMessage(t('register.successMessage'));
-      
-      // Redirect after 5 seconds to give user time to read the message
+
       setTimeout(() => {
         router.push('/login');
       }, 5000);

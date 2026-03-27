@@ -27,6 +27,14 @@ export default function DashboardPage() {
   const [showDocumentDialog, setShowDocumentDialog] = useState(false);
   const [showDocumentQRDialog, setShowDocumentQRDialog] = useState(false);
   const [selectedDocument, setSelectedDocument] = useState<DocOps | null>(null);
+  const [showDeleteConfirmDialog, setShowDeleteConfirmDialog] = useState(false);
+  const [documentToDelete, setDocumentToDelete] = useState<DocOps | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [showEditDialog, setShowEditDialog] = useState(false);
+  const [documentToEdit, setDocumentToEdit] = useState<DocOps | null>(null);
+  const [editForm, setEditForm] = useState({ title: '', url: '' });
+  const [editErrors, setEditErrors] = useState<{ [key: string]: string }>({});
+  const [isUpdating, setIsUpdating] = useState(false);
 
   useEffect(() => {
     // Check if user is authenticated
@@ -113,6 +121,86 @@ export default function DashboardPage() {
   const handleDocumentEmail = () => {
     // Logic untuk Email akan diimplementasikan nanti
     setShowDocumentDialog(false);
+  };
+
+  const handleEditDocument = (doc: DocOps, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setDocumentToEdit(doc);
+    setEditForm({ title: doc.title, url: doc.url });
+    setEditErrors({});
+    setShowEditDialog(true);
+  };
+
+  const handleEditFormChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setEditForm((prev) => ({ ...prev, [name]: value }));
+    if (editErrors[name]) {
+      setEditErrors((prev) => ({ ...prev, [name]: '' }));
+    }
+  };
+
+  const handleEditSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!documentToEdit) return;
+
+    const errors: { [key: string]: string } = {};
+    if (!editForm.title.trim()) errors.title = t('dashboard.titleRequired');
+    if (!editForm.url.trim()) {
+      errors.url = t('dashboard.urlRequired');
+    } else {
+      try { new URL(editForm.url); } catch { errors.url = t('dashboard.urlInvalid'); }
+    }
+    if (Object.keys(errors).length > 0) { setEditErrors(errors); return; }
+
+    setIsUpdating(true);
+    try {
+      const response = await fetch('/api/documents', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: documentToEdit.id, title: editForm.title, url: editForm.url }),
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        if (data.errors) { setEditErrors(data.errors); }
+        else { setEditErrors({ general: data.message || t('dashboard.documentUpdateFailed') }); }
+        return;
+      }
+      setShowEditDialog(false);
+      setDocumentToEdit(null);
+      alert(t('dashboard.documentUpdated'));
+      if (user?.id) fetchDocuments(user.id);
+    } catch {
+      setEditErrors({ general: t('dashboard.unexpectedError') });
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
+  const handleDeleteDocument = (doc: DocOps, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setDocumentToDelete(doc);
+    setShowDeleteConfirmDialog(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!documentToDelete) return;
+    setIsDeleting(true);
+    try {
+      const response = await fetch(`/api/documents?id=${documentToDelete.id}`, { method: 'DELETE' });
+      const data = await response.json();
+      if (!response.ok) {
+        alert(data.message || t('dashboard.documentDeleteFailed'));
+        return;
+      }
+      setShowDeleteConfirmDialog(false);
+      setDocumentToDelete(null);
+      alert(t('dashboard.documentDeleted'));
+      if (user?.id) fetchDocuments(user.id);
+    } catch {
+      alert(t('dashboard.unexpectedError'));
+    } finally {
+      setIsDeleting(false);
+    }
   };
 
   const handleUploadFormChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -330,16 +418,35 @@ export default function DashboardPage() {
 
                 {/* Document Buttons */}
                 {documents.map((doc) => (
-                  <button
-                    key={doc.id}
-                    onClick={() => handleDocumentClick(doc)}
-                    className="inline-flex items-center gap-2 px-6 py-3 bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 shadow transition-all hover:shadow-lg"
-                  >
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                    </svg>
-                    {doc.title}
-                  </button>
+                  <div key={doc.id} className="inline-flex items-center shadow rounded-lg overflow-hidden">
+                    <button
+                      onClick={() => handleDocumentClick(doc)}
+                      className="inline-flex items-center gap-2 px-6 py-3 bg-green-600 hover:bg-green-700 text-white font-medium focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-all hover:shadow-lg"
+                    >
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                      </svg>
+                      {doc.title}
+                    </button>
+                    <button
+                      onClick={(e) => handleEditDocument(doc, e)}
+                      title={t('dashboard.edit')}
+                      className="px-3 py-3 bg-yellow-500 hover:bg-yellow-600 text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-yellow-400 transition-colors border-l border-yellow-400"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                      </svg>
+                    </button>
+                    <button
+                      onClick={(e) => handleDeleteDocument(doc, e)}
+                      title={t('dashboard.delete')}
+                      className="px-3 py-3 bg-red-500 hover:bg-red-600 text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-400 transition-colors border-l border-red-400"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                      </svg>
+                    </button>
+                  </div>
                 ))}
 
                 {documents.length === 0 && (
@@ -587,6 +694,127 @@ export default function DashboardPage() {
               >
                 {t('dashboard.close')}
               </button>
+            </div>
+          </div>
+        )}
+
+        {/* Delete Confirmation Dialog */}
+        {showDeleteConfirmDialog && documentToDelete && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full p-6">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="shrink-0 w-10 h-10 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center">
+                  <svg className="w-5 h-5 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                  </svg>
+                </div>
+                <h3 className="text-xl font-bold text-gray-900 dark:text-white">
+                  {t('dashboard.deleteDocument')}
+                </h3>
+              </div>
+              <p className="text-sm text-gray-600 dark:text-gray-400 mb-6">
+                {t('dashboard.deleteConfirmMessage').replace('{title}', documentToDelete.title)}
+              </p>
+              <div className="flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowDeleteConfirmDialog(false);
+                    setDocumentToDelete(null);
+                  }}
+                  disabled={isDeleting}
+                  className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {t('dashboard.cancel')}
+                </button>
+                <button
+                  type="button"
+                  onClick={handleConfirmDelete}
+                  disabled={isDeleting}
+                  className="flex-1 px-4 py-2 bg-red-600 hover:bg-red-700 text-white font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isDeleting ? t('dashboard.deleting') : t('dashboard.delete')}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Edit Document Dialog */}
+        {showEditDialog && documentToEdit && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full p-6">
+              <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-4">
+                {t('dashboard.editDocument')}
+              </h3>
+
+              {editErrors.general && (
+                <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+                  <p className="text-sm text-red-800 dark:text-red-400">{editErrors.general}</p>
+                </div>
+              )}
+
+              <form onSubmit={handleEditSubmit} className="space-y-4">
+                <div>
+                  <label htmlFor="edit-title" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    {t('dashboard.titleLabel')} <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    id="edit-title"
+                    name="title"
+                    type="text"
+                    value={editForm.title}
+                    onChange={handleEditFormChange}
+                    placeholder={t('dashboard.titlePlaceholder')}
+                    className={`w-full px-4 py-2 border ${
+                      editErrors.title ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'
+                    } rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500`}
+                  />
+                  {editErrors.title && (
+                    <p className="mt-1 text-sm text-red-600 dark:text-red-400">{editErrors.title}</p>
+                  )}
+                </div>
+                <div>
+                  <label htmlFor="edit-url" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    {t('dashboard.urlLabel')} <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    id="edit-url"
+                    name="url"
+                    type="url"
+                    value={editForm.url}
+                    onChange={handleEditFormChange}
+                    placeholder={t('dashboard.urlPlaceholder')}
+                    className={`w-full px-4 py-2 border ${
+                      editErrors.url ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'
+                    } rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500`}
+                  />
+                  {editErrors.url && (
+                    <p className="mt-1 text-sm text-red-600 dark:text-red-400">{editErrors.url}</p>
+                  )}
+                </div>
+                <div className="flex gap-3 mt-6">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowEditDialog(false);
+                      setDocumentToEdit(null);
+                      setEditErrors({});
+                    }}
+                    disabled={isUpdating}
+                    className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {t('dashboard.cancel')}
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={isUpdating}
+                    className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {isUpdating ? t('dashboard.updating') : t('dashboard.save')}
+                  </button>
+                </div>
+              </form>
             </div>
           </div>
         )}

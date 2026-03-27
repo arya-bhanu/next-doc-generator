@@ -112,6 +112,17 @@
     "smsWA": "SMS/WA",
     "email": "Email",
     "close": "Tutup",
-    "qrCodeTitle": "Kode QR - {title}"
+    "qrCodeTitle": "Kode QR - {title}",
+    "edit": "Edit",
+    "delete": "Hapus",
+    "editDocument": "Edit Dokumen",
+    "deleteDocument": "Hapus Dokumen",
+    "deleteConfirmMessage": "Apakah Anda yakin ingin menghapus \"{title}\"? Tindakan ini tidak dapat dibatalkan.",
+    "deleting": "Menghapus...",
+    "updating": "Memperbarui...",
+    "documentUpdated": "Dokumen berhasil diperbarui!",
+    "documentDeleted": "Dokumen berhasil dihapus!",
+    "documentUpdateFailed": "Gagal memperbarui dokumen",
+    "documentDeleteFailed": "Gagal menghapus dokumen"
   }
 }

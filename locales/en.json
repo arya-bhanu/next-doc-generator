@@ -112,6 +112,17 @@
     "smsWA": "SMS/WA",
     "email": "Email",
     "close": "Close",
-    "qrCodeTitle": "QR Code - {title}"
+    "qrCodeTitle": "QR Code - {title}",
+    "edit": "Edit",
+    "delete": "Delete",
+    "editDocument": "Edit Document",
+    "deleteDocument": "Delete Document",
+    "deleteConfirmMessage": "Are you sure you want to delete \"{title}\"? This action cannot be undone.",
+    "deleting": "Deleting...",
+    "updating": "Updating...",
+    "documentUpdated": "Document updated successfully!",
+    "documentDeleted": "Document deleted successfully!",
+    "documentUpdateFailed": "Failed to update document",
+    "documentDeleteFailed": "Failed to delete document"
   }
 }

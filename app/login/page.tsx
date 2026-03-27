@@ -23,7 +23,6 @@ export default function LoginPage() {
       ...prev,
       [name]: value,
     }));
-    // Clear error when user starts typing
     if (errors[name]) {
       setErrors((prev) => ({
         ...prev,
@@ -52,7 +51,6 @@ export default function LoginPage() {
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     
-    // Frontend validation
     if (!validateForm()) {
       return;
     }
@@ -61,14 +59,12 @@ export default function LoginPage() {
     setErrors({});
 
     try {
-      // Sign in with Supabase
       const { data, error } = await supabase.auth.signInWithPassword({
         email: formData.email,
         password: formData.password,
       });
 
       if (error) {
-        // Handle authentication errors
         if (error.message.includes('Invalid login credentials')) {
           setErrors({ general: t('login.invalidCredentials') });
         } else if (error.message.includes('Email not confirmed')) {
@@ -80,7 +76,6 @@ export default function LoginPage() {
       }
 
       if (data.user) {
-        // Success - redirect to dashboard
         router.push('/dashboard');
       }
     } catch (error) {
