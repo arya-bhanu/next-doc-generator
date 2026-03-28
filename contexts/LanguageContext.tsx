@@ -24,10 +24,9 @@ const translations: Record<Locale, Translations> = {
 const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
 
 export function LanguageProvider({ children }: { children: ReactNode }) {
-  const [locale, setLocaleState] = useState<Locale>('id'); // Default to Bahasa Indonesia
+  const [locale, setLocaleState] = useState<Locale>('id');
 
   useEffect(() => {
-    // Load saved language preference from localStorage
     const savedLocale = localStorage.getItem('locale') as Locale;
     if (savedLocale && (savedLocale === 'id' || savedLocale === 'en')) {
       setLocaleState(savedLocale);
@@ -47,7 +46,7 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
       if (value && typeof value === 'object' && k in value) {
         value = value[k];
       } else {
-        return key; // Return key if translation not found
+        return key;
       }
     }
 

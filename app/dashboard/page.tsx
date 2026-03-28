@@ -308,6 +308,16 @@ export default function DashboardPage() {
             </h1>
             <div className="flex items-center gap-4">
               <LanguageToggle />
+                {/* Send Email Button */}
+                <button
+                  onClick={() => setShowEmailDialog(true)}
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 shadow transition-all hover:shadow-lg text-sm"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                  </svg>
+                  {t('dashboard.sendEmail')}
+                </button>
               <button
                 onClick={() => setShowUploadDialog(true)}
                 className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-medium rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 flex items-center gap-2"
@@ -405,17 +415,6 @@ export default function DashboardPage() {
               </div>
             ) : (
               <div className="flex flex-wrap gap-3 justify-center">
-                {/* Send Email Button */}
-                <button
-                  onClick={() => setShowEmailDialog(true)}
-                  className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 shadow transition-all hover:shadow-lg"
-                >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                  </svg>
-                  {t('dashboard.sendEmail')}
-                </button>
-
                 {/* Document Buttons */}
                 {documents.map((doc) => (
                   <div key={doc.id} className="inline-flex items-center shadow rounded-lg overflow-hidden">
