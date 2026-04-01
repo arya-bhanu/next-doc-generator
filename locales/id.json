@@ -68,7 +68,7 @@
     "unexpectedError": "Terjadi kesalahan yang tidak terduga. Silakan coba lagi."
   },
   "dashboard": {
-    "title": "Dasbor",
+    "title": "Dashboard",
     "logout": "Keluar",
     "welcomeTitle": "Selamat datang kembali! 👋",
     "welcomeMessage": "Anda sekarang masuk ke akun Anda.",
@@ -84,8 +84,8 @@
     "totalDocuments": "Total Dokumen",
     "pendingReviews": "Tinjauan Tertunda",
     "completedTasks": "Tugas Selesai",
-    "infoTitle": "Informasi Dasbor",
-    "infoMessage": "Ini adalah halaman dasbor percobaan. Autentikasi Anda berfungsi dengan benar!",
+    "infoTitle": "Informasi Dashboard",
+    "infoMessage": "Ini adalah halaman dashboard percobaan. Autentikasi Anda berfungsi dengan benar!",
     "sendEmail": "Kirim Email",
     "selectOption": "Pilih Opsi Pengiriman",
     "qrCode": "Kode QR",

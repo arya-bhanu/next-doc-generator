@@ -3,8 +3,8 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
-import { User } from '@supabase/supabase-js';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useAuthCheck } from '@/hooks/useAuthCheck';
 import LanguageToggle from '@/components/LanguageToggle';
 import { QRCodeSVG } from 'qrcode.react';
 import { DocOps } from './type';
@@ -12,8 +12,7 @@ import { DocOps } from './type';
 export default function DashboardPage() {
   const router = useRouter();
   const { t } = useLanguage();
-  const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
+  const { user, loading } = useAuthCheck();
   const [showEmailDialog, setShowEmailDialog] = useState(false);
   const [showQRDialog, setShowQRDialog] = useState(false);
   const [qrData, setQrData] = useState('');
@@ -36,26 +35,12 @@ export default function DashboardPage() {
   const [editErrors, setEditErrors] = useState<{ [key: string]: string }>({});
   const [isUpdating, setIsUpdating] = useState(false);
 
+  // Fetch documents whenever the verified user becomes available
   useEffect(() => {
-    // Check if user is authenticated
-    const checkUser = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      
-      if (!user) {
-        // Not authenticated, redirect to login
-        router.push('/login');
-        return;
-      }
-      
-      setUser(user);
-      setLoading(false);
-      
-      // Fetch documents
+    if (user?.id) {
       fetchDocuments(user.id);
-    };
-
-    checkUser();
-  }, [router]);
+    }
+  }, [user?.id]);
 
   const fetchDocuments = async (userUid: string) => {
     try {
@@ -353,6 +338,56 @@ export default function DashboardPage() {
         </div>
 
         {/* User Info Card */}
+        <div className="bg-white dark:bg-gray-800 overflow-hidden shadow rounded-lg mb-6">
+          <div className="px-4 py-5 sm:p-6">
+            <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">
+              {t('dashboard.userInfo')}
+            </h3>
+            <dl className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div>
+                <dt className="text-sm font-medium text-gray-500 dark:text-gray-400">{t('dashboard.email')}</dt>
+                <dd className="mt-1 text-sm text-gray-900 dark:text-white">{user?.email}</dd>
+              </div>
+              <div>
+                <dt className="text-sm font-medium text-gray-500 dark:text-gray-400">{t('dashboard.userId')}</dt>
+                <dd className="mt-1 text-sm text-gray-900 dark:text-white font-mono">{user?.id}</dd>
+              </div>
+              <div>
+                <dt className="text-sm font-medium text-gray-500 dark:text-gray-400">{t('dashboard.name')}</dt>
+                <dd className="mt-1 text-sm text-gray-900 dark:text-white">
+                  {user?.user_metadata?.name || t('dashboard.notSet')}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-sm font-medium text-gray-500 dark:text-gray-400">{t('dashboard.role')}</dt>
+                <dd className="mt-1 text-sm text-gray-900 dark:text-white">
+                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                    user?.user_metadata?.role === 'cs' 
+                      ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' 
+                      : 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
+                  }`}>
+                    {user?.user_metadata?.role === 'cs' ? t('dashboard.roleCS') : user?.user_metadata?.role === 'ub' ? t('dashboard.roleUB') : t('dashboard.notSet')}
+                  </span>
+                </dd>
+              </div>
+              <div>
+                <dt className="text-sm font-medium text-gray-500 dark:text-gray-400">{t('dashboard.createdAt')}</dt>
+                <dd className="mt-1 text-sm text-gray-900 dark:text-white">
+                  {user?.created_at ? new Date(user.created_at).toLocaleString() : 'N/A'}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-sm font-medium text-gray-500 dark:text-gray-400">{t('dashboard.lastSignIn')}</dt>
+                <dd className="mt-1 text-sm text-gray-900 dark:text-white">
+                  {user?.last_sign_in_at ? new Date(user.last_sign_in_at).toLocaleString() : 'N/A'}
+                </dd>
+              </div>
+            </dl>
+          </div>
+        </div>
+
+
+         {/* Form Sessions */}
         <div className="bg-white dark:bg-gray-800 overflow-hidden shadow rounded-lg mb-6">
           <div className="px-4 py-5 sm:p-6">
             <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">
