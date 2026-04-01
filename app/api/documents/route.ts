@@ -1,8 +1,38 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
+import { golangApi } from '@/lib/apiClient';
 
+// ---------------------------------------------------------------------------
+// Helper: extract the Bearer token from the incoming request's Authorization
+// header and return an early 401 response when it is missing.
+// ---------------------------------------------------------------------------
+function extractToken(
+  request: NextRequest
+): { token: string } | { error: NextResponse } {
+  const authHeader = request.headers.get('Authorization') ?? '';
+  const token = authHeader.startsWith('Bearer ')
+    ? authHeader.slice(7).trim()
+    : '';
+
+  if (!token) {
+    return {
+      error: NextResponse.json(
+        { message: 'Token autentikasi diperlukan' },
+        { status: 401 }
+      ),
+    };
+  }
+
+  return { token };
+}
+
+// ---------------------------------------------------------------------------
+// GET /api/documents?userUid=<uid>
+// ---------------------------------------------------------------------------
 export async function GET(request: NextRequest) {
   try {
+    const auth = extractToken(request);
+    if ('error' in auth) return auth.error;
+
     const { searchParams } = new URL(request.url);
     const userUid = searchParams.get('userUid');
 
@@ -13,36 +43,15 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const { data: opsUser, error: opsUserError } = await supabase
-      .from('ops_user')
-      .select('id')
-      .eq('uid', userUid)
-      .single();
+    const res = await golangApi.get('/documents', {
+      token: auth.token,
+      params: { userUid },
+    });
 
-    if (opsUserError || !opsUser) {
-      return NextResponse.json(
-        { message: 'User tidak ditemukan di ops_user' },
-        { status: 404 }
-      );
-    }
-
-    const { data, error } = await supabase
-      .from('documents')
-      .select('*')
-      .eq('user_id', opsUser.id)
-      .order('created_at', { ascending: false });
-
-    if (error) {
-      console.error('Error fetching documents:', error);
-      return NextResponse.json(
-        { message: 'Gagal mengambil dokumen', error: error.message },
-        { status: 500 }
-      );
-    }
-
-    return NextResponse.json({ data }, { status: 200 });
+    const data = await res.json();
+    return NextResponse.json(data, { status: res.status });
   } catch (error) {
-    console.error('Unexpected error:', error);
+    console.error('[GET /api/documents] Unexpected error:', error);
     return NextResponse.json(
       { message: 'Terjadi kesalahan yang tidak terduga' },
       { status: 500 }
@@ -50,104 +59,17 @@ export async function GET(request: NextRequest) {
   }
 }
 
-export async function PUT(request: NextRequest) {
-  try {
-    const { id, title, url } = await request.json();
-
-    const errors: { [key: string]: string } = {};
-
-    if (!id) {
-      errors.general = 'Document ID diperlukan';
-    }
-
-    if (!title || !title.trim()) {
-      errors.title = 'Judul wajib diisi';
-    }
-
-    if (!url || !url.trim()) {
-      errors.url = 'URL wajib diisi';
-    } else {
-      try {
-        new URL(url);
-      } catch {
-        errors.url = 'URL tidak valid';
-      }
-    }
-
-    if (Object.keys(errors).length > 0) {
-      return NextResponse.json({ errors }, { status: 400 });
-    }
-
-    const { data, error } = await supabase
-      .from('documents')
-      .update({ title: title.trim(), url: url.trim() })
-      .eq('id', id)
-      .select();
-
-    if (error) {
-      console.error('Error updating document:', error);
-      return NextResponse.json(
-        { message: 'Gagal memperbarui dokumen', error: error.message },
-        { status: 500 }
-      );
-    }
-
-    return NextResponse.json(
-      { message: 'Dokumen berhasil diperbarui', data },
-      { status: 200 }
-    );
-  } catch (error) {
-    console.error('Unexpected error:', error);
-    return NextResponse.json(
-      { message: 'Terjadi kesalahan yang tidak terduga' },
-      { status: 500 }
-    );
-  }
-}
-
-export async function DELETE(request: NextRequest) {
-  try {
-    const { searchParams } = new URL(request.url);
-    const id = searchParams.get('id');
-
-    if (!id) {
-      return NextResponse.json(
-        { message: 'Document ID diperlukan' },
-        { status: 400 }
-      );
-    }
-
-    const { error } = await supabase
-      .from('documents')
-      .delete()
-      .eq('id', id);
-
-    if (error) {
-      console.error('Error deleting document:', error);
-      return NextResponse.json(
-        { message: 'Gagal menghapus dokumen', error: error.message },
-        { status: 500 }
-      );
-    }
-
-    return NextResponse.json(
-      { message: 'Dokumen berhasil dihapus' },
-      { status: 200 }
-    );
-  } catch (error) {
-    console.error('Unexpected error:', error);
-    return NextResponse.json(
-      { message: 'Terjadi kesalahan yang tidak terduga' },
-      { status: 500 }
-    );
-  }
-}
-
+// ---------------------------------------------------------------------------
+// POST /api/documents  – create a document
+// ---------------------------------------------------------------------------
 export async function POST(request: NextRequest) {
   try {
+    const auth = extractToken(request);
+    if ('error' in auth) return auth.error;
+
     const { title, url, userUid } = await request.json();
 
-    const errors: { [key: string]: string } = {};
+    const errors: Record<string, string> = {};
 
     if (!title || !title.trim()) {
       errors.title = 'Judul wajib diisi';
@@ -171,44 +93,98 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ errors }, { status: 400 });
     }
 
-    const { data: opsUser, error: opsUserError } = await supabase
-      .from('ops_user')
-      .select('id')
-      .eq('uid', userUid)
-      .single();
+    const res = await golangApi.post('/documents', {
+      token: auth.token,
+      body: { title: title.trim(), url: url.trim(), userUid },
+    });
 
-    if (opsUserError || !opsUser) {
-      return NextResponse.json(
-        { message: 'User tidak ditemukan di ops_user' },
-        { status: 404 }
-      );
-    }
-
-    const { data, error } = await supabase
-      .from('documents')
-      .insert([
-        {
-          title: title.trim(),
-          url: url.trim(),
-          user_id: opsUser.id,
-        },
-      ])
-      .select();
-
-    if (error) {
-      console.error('Error creating document:', error);
-      return NextResponse.json(
-        { message: 'Gagal menyimpan dokumen', error: error.message },
-        { status: 500 }
-      );
-    }
-
-    return NextResponse.json(
-      { message: 'Dokumen berhasil dibuat', data },
-      { status: 201 }
-    );
+    const data = await res.json();
+    return NextResponse.json(data, { status: res.status });
   } catch (error) {
-    console.error('Unexpected error:', error);
+    console.error('[POST /api/documents] Unexpected error:', error);
+    return NextResponse.json(
+      { message: 'Terjadi kesalahan yang tidak terduga' },
+      { status: 500 }
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// PUT /api/documents  – update a document
+// ---------------------------------------------------------------------------
+export async function PUT(request: NextRequest) {
+  try {
+    const auth = extractToken(request);
+    if ('error' in auth) return auth.error;
+
+    const { id, title, url } = await request.json();
+
+    const errors: Record<string, string> = {};
+
+    if (!id) {
+      errors.general = 'Document ID diperlukan';
+    }
+
+    if (!title || !title.trim()) {
+      errors.title = 'Judul wajib diisi';
+    }
+
+    if (!url || !url.trim()) {
+      errors.url = 'URL wajib diisi';
+    } else {
+      try {
+        new URL(url);
+      } catch {
+        errors.url = 'URL tidak valid';
+      }
+    }
+
+    if (Object.keys(errors).length > 0) {
+      return NextResponse.json({ errors }, { status: 400 });
+    }
+
+    const res = await golangApi.put(`/documents/${id}`, {
+      token: auth.token,
+      body: { title: title.trim(), url: url.trim() },
+    });
+
+    const data = await res.json();
+    return NextResponse.json(data, { status: res.status });
+  } catch (error) {
+    console.error('[PUT /api/documents] Unexpected error:', error);
+    return NextResponse.json(
+      { message: 'Terjadi kesalahan yang tidak terduga' },
+      { status: 500 }
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// DELETE /api/documents?id=<id>
+// ---------------------------------------------------------------------------
+export async function DELETE(request: NextRequest) {
+  try {
+    const auth = extractToken(request);
+    if ('error' in auth) return auth.error;
+
+    const { searchParams } = new URL(request.url);
+    const id = searchParams.get('id');
+
+    if (!id) {
+      return NextResponse.json(
+        { message: 'Document ID diperlukan' },
+        { status: 400 }
+      );
+    }
+
+    const res = await golangApi.delete(`/documents/${id}`, {
+      token: auth.token,
+    });
+
+    const data = await res.json();
+    return NextResponse.json(data, { status: res.status });
+  } catch (error) {
+    console.error('[DELETE /api/documents] Unexpected error:', error);
     return NextResponse.json(
       { message: 'Terjadi kesalahan yang tidak terduga' },
       { status: 500 }
