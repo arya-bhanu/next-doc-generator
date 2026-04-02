@@ -533,7 +533,25 @@ export default function DashboardPage() {
         {/* ------------------------------------------------------------------ */}
         <div className="bg-white dark:bg-gray-800 overflow-hidden shadow rounded-lg mb-6">
           <div className="px-4 py-5 sm:p-6">
-            <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">Form Sessions</h3>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-medium text-gray-900 dark:text-white">Form Sessions</h3>
+              <button
+                onClick={() => user?.id && fetchFormSessions(user.id)}
+                disabled={loadingFormSessions}
+                title="Refresh Form Sessions"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <svg
+                  className={`w-4 h-4 ${loadingFormSessions ? 'animate-spin' : ''}`}
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+                Refresh
+              </button>
+            </div>
 
             {loadingFormSessions ? (
               <div className="text-center py-8">
