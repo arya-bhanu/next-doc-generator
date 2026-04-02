@@ -90,6 +90,9 @@ export default function DashboardPage() {
   const [templatePage, setTemplatePage] = useState(1);
   const [selectedTemplateIds, setSelectedTemplateIds] = useState<Set<string>>(new Set());
 
+  // Role fetched from ops_user table
+  const [opsUserRole, setOpsUserRole] = useState<string | null>(null);
+
   // ---------------------------------------------------------------------------
   // Helper: get a fresh Supabase access-token for every outbound API call
   // ---------------------------------------------------------------------------
@@ -234,6 +237,11 @@ export default function DashboardPage() {
             } else {
               const resData = await createRes.json().catch(() => ({}));
               showToast(resData.msg || t('dashboard.docCreatedSuccess'), 'success');
+              // If the API returned a Google Form URL, show the QR code dialog immediately
+              if (resData.data && typeof resData.data === 'string' && resData.data.trim() !== '') {
+                setQrData(resData.data.trim());
+                setShowQRDialog(true);
+              }
             }
           } catch (err) {
             console.error('[handleOpsFormSubmit → create-form] Error:', err);
@@ -277,6 +285,24 @@ export default function DashboardPage() {
     }
   };
 
+  // ---------------------------------------------------------------------------
+  // Fetch role from ops_user table (source of truth for role)
+  // ---------------------------------------------------------------------------
+  const fetchOpsUserRole = async (uid: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('ops_user')
+        .select('role')
+        .eq('uid', uid)
+        .single();
+      if (!error && data?.role) {
+        setOpsUserRole(data.role);
+      }
+    } catch (err) {
+      console.error('[fetchOpsUserRole] Error:', err);
+    }
+  };
+
   // Fetch documents + call refresh whenever the verified user becomes available.
   // callOnLogin fires only ONCE per login session (not on every page refresh).
   // We track this with a sessionStorage key composed of uid + last_sign_in_at.
@@ -294,6 +320,7 @@ export default function DashboardPage() {
     callDocumentRefresh();
     fetchDocumentTemplates();
     fetchFormSessions(user.id);
+    fetchOpsUserRole(user.id);
   }, [user?.id]);
 
   const fetchFormSessions = async (userUid: string) => {
@@ -516,13 +543,30 @@ export default function DashboardPage() {
               <div>
                 <dt className="text-sm font-medium text-gray-500 dark:text-gray-400">{t('dashboard.role')}</dt>
                 <dd className="mt-1 text-sm text-gray-900 dark:text-white">
-                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                    user?.user_metadata?.role === 'cs' 
-                      ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' 
-                      : 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
-                  }`}>
-                    {user?.user_metadata?.role === 'cs' ? t('dashboard.roleCS') : user?.user_metadata?.role === 'ub' ? t('dashboard.roleUB') : t('dashboard.notSet')}
-                  </span>
+                  {(() => {
+                    const role = opsUserRole ?? user?.user_metadata?.role;
+                    const colorClass =
+                      role === 'cs'
+                        ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
+                        : role === 'ub'
+                        ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
+                        : role === 'admin'
+                        ? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'
+                        : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300';
+                    const label =
+                      role === 'cs'
+                        ? t('dashboard.roleCS')
+                        : role === 'ub'
+                        ? t('dashboard.roleUB')
+                        : role === 'admin'
+                        ? 'Admin'
+                        : role ?? t('dashboard.notSet');
+                    return (
+                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${colorClass}`}>
+                        {label}
+                      </span>
+                    );
+                  })()}
                 </dd>
               </div>
               <div>

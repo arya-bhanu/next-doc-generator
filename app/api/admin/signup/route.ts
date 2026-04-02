@@ -1,0 +1,131 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { createClient } from '@supabase/supabase-js';
+import { supabase } from '@/lib/supabase';
+
+// Service-role client for server-side inserts (bypasses RLS)
+const supabaseAdmin = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY ?? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+);
+
+/**
+ * POST /api/admin/signup
+ *
+ * Registers a new admin user:
+ *   1. Validates input (name, email, password, confirmPassword)
+ *   2. Creates a Supabase auth user with role "admin" in user_metadata
+ *   3. Inserts a row into the ops_user table with role "admin"
+ */
+export async function POST(request: NextRequest) {
+  try {
+    const body = await request.json();
+    const { name, email, password, confirmPassword } = body;
+    const errors: Record<string, string> = {};
+
+    // -----------------------------------------------------------------------
+    // Input validation
+    // -----------------------------------------------------------------------
+    if (!name || !name.trim()) {
+      errors.name = 'Name is required';
+    }
+
+    if (!email || !email.trim()) {
+      errors.email = 'Email is required';
+    } else if (!/\S+@\S+\.\S+/.test(email)) {
+      errors.email = 'Email is invalid';
+    }
+
+    if (!password) {
+      errors.password = 'Password is required';
+    } else if (password.length < 6) {
+      errors.password = 'Password must be at least 6 characters';
+    }
+
+    if (!confirmPassword) {
+      errors.confirmPassword = 'Confirm password is required';
+    }
+
+    if (password && confirmPassword && password !== confirmPassword) {
+      errors.confirmPassword = 'Passwords do not match';
+    }
+
+    if (Object.keys(errors).length > 0) {
+      return NextResponse.json(
+        { message: 'Validation failed', errors },
+        { status: 400 }
+      );
+    }
+
+    // -----------------------------------------------------------------------
+    // Step 1 – Create the Supabase auth user
+    // -----------------------------------------------------------------------
+    const { data: authData, error: authError } = await supabase.auth.signUp({
+      email: email.trim(),
+      password,
+      options: {
+        data: { name: name.trim(), role: 'admin' },
+      },
+    });
+
+    if (authError) {
+      if (authError.message.includes('already registered')) {
+        return NextResponse.json(
+          {
+            message: 'Email already registered',
+            errors: { email: 'Email already registered' },
+          },
+          { status: 400 }
+        );
+      }
+      return NextResponse.json({ message: authError.message }, { status: 400 });
+    }
+
+    if (!authData.user) {
+      return NextResponse.json(
+        { message: 'Failed to create auth user' },
+        { status: 500 }
+      );
+    }
+
+    // -----------------------------------------------------------------------
+    // Step 2 – Insert into ops_user table with role "admin"
+    // -----------------------------------------------------------------------
+    const { error: dbError } = await supabaseAdmin
+      .from('ops_user')
+      .insert({
+        uid: authData.user.id,
+        name: name.trim(),
+        email: email.trim(),
+        role: 'admin',
+      });
+
+    if (dbError) {
+      console.error('[POST /api/admin/signup] ops_user insert error:', dbError);
+      // Auth user was created – clean up to avoid orphan accounts
+      await supabaseAdmin.auth.admin.deleteUser(authData.user.id);
+      return NextResponse.json(
+        { message: 'Failed to create admin profile', error: dbError.message },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json(
+      {
+        message: 'Admin registration successful',
+        user: {
+          uid: authData.user.id,
+          name: name.trim(),
+          email: authData.user.email,
+          role: 'admin',
+        },
+      },
+      { status: 201 }
+    );
+  } catch (error) {
+    console.error('[POST /api/admin/signup] Unexpected error:', error);
+    return NextResponse.json(
+      { message: 'An unexpected error occurred' },
+      { status: 500 }
+    );
+  }
+}
