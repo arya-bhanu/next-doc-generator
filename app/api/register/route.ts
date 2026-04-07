@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
-import { golangApi } from '@/lib/apiClient';
 
 export async function POST(request: NextRequest) {
   try {
@@ -81,41 +80,29 @@ export async function POST(request: NextRequest) {
     }
 
     // -----------------------------------------------------------------------
-    // Step 2 – Call the Golang API to persist the user profile.
-    //
-    // After signUp(), Supabase may return a live session (email confirmation
-    // disabled) or null (email confirmation required).  We use the session
-    // access-token when available; otherwise we fall back to the anon key so
-    // the request can still reach the Golang service.
+    // Step 2 – Insert the user profile directly into the Supabase `users` table.
     // -----------------------------------------------------------------------
-    const accessToken =
-      authData.session?.access_token ??
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ??
-      '';
-
-    const golangRes = await golangApi.post('/users/register', {
-      token: accessToken,
-      body: {
+    const { data: userData, error: insertError } = await supabase
+      .from('ops_user')
+      .insert({
         uid: authData.user.id,
         name: name.trim(),
         email: email.trim(),
         role,
-      },
-    });
+      })
+      .select()
+      .single();
 
-    if (!golangRes.ok) {
-      const golangError = await golangRes.json().catch(() => ({}));
-      console.error('[POST /api/register] Golang API error:', golangError);
+    if (insertError) {
+      console.error('[POST /api/register] Supabase insert error:', insertError);
       return NextResponse.json(
         {
           message: 'Failed to create user profile',
-          error: golangError,
+          error: insertError,
         },
-        { status: golangRes.status }
+        { status: 500 }
       );
     }
-
-    const userData = await golangRes.json();
 
     return NextResponse.json(
       {
